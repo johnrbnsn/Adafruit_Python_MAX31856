@@ -36,6 +36,7 @@ class Adafruit_MAX31856(unittest.TestCase):
         '''Checks to see if the sensor can initialize on the hardware SPI interface.
         
         Will fail if it cannot find the MAX31856 library or any dependencies.
+        Test only checks to see that the sensor can be initialized in Software, does not check the hardware connection.
         '''
         
         # Raspberry Pi hardware SPI configuration.
@@ -47,6 +48,23 @@ class Adafruit_MAX31856(unittest.TestCase):
             self.assertTrue(True)
         else:
             self.assertTrue(False)
+
+    def test_get_temperaure_reading(self):
+        '''Checks to see if we can read a temperature from the board, using Hardware SPI
+        '''
+
+        # Raspberry Pi hardware SPI configuration.
+        SPI_PORT   = 0
+        SPI_DEVICE = 0
+        sensor = MAX31856.MAX31856(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE))
+
+        temp = sensor.readTempC()
+
+        if temp:
+            self.assertTrue(True)
+        else:
+            self.assertTrue(False)
+
 
 
 if __name__ == "__main__":
