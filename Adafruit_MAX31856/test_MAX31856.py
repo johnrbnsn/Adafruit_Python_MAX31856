@@ -22,16 +22,20 @@
 # Global Imports
 import logging
 import unittest
+import Adafruit_GPIO.SPI as SPI
 
 # Local Imports
 import MAX31856
+
+logging.basicConfig(filename='test_MAX31856.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class Adafruit_MAX31856(unittest.TestCase):
     
     def test_hardware_SPI_initialize(self):
         '''Checks to see if the sensor can initialize on the hardware SPI interface.
         
-        Will fail if sensor is not connected, or connected imporperly.
+        Will fail if it cannot find the MAX31856 library or any dependencies.
         '''
         
         # Raspberry Pi hardware SPI configuration.
@@ -40,6 +44,10 @@ class Adafruit_MAX31856(unittest.TestCase):
         sensor = MAX31856.MAX31856(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE))
         
         if sensor:
-            self.assert_true(True)
+            self.assertTrue(True)
         else:
-            self.assert_true(False)
+            self.assertTrue(False)
+
+
+if __name__ == "__main__":
+    unittest.main()
