@@ -48,23 +48,38 @@ class Adafruit_MAX31856(unittest.TestCase):
             self.assertTrue(True)
         else:
             self.assertTrue(False)
-
-    def test_get_temperaure_reading(self):
-        '''Checks to see if we can read a temperature from the board, using Hardware SPI
+            
+    def test_get_register_reading(self):
+        '''Checks to see if we can read a register from the device.  Good test for correct connectivity.
         '''
-
+        
         # Raspberry Pi hardware SPI configuration.
         SPI_PORT   = 0
         SPI_DEVICE = 0
         sensor = MAX31856.MAX31856(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE))
-
-        temp = sensor.readTempC()
-
-        if temp:
+        
+        value = sensor._read_register(MAX31856.MAX31856_REG_READ_CR0)
+        
+        if value:
             self.assertTrue(True)
         else:
             self.assertTrue(False)
 
+    #def test_get_temperaure_reading(self):
+        #'''Checks to see if we can read a temperature from the board, using Hardware SPI
+        #'''
+
+        ## Raspberry Pi hardware SPI configuration.
+        #SPI_PORT   = 0
+        #SPI_DEVICE = 0
+        #sensor = MAX31856.MAX31856(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE))
+
+        #temp = sensor.readTempC()
+
+        #if temp:
+            #self.assertTrue(True)
+        #else:
+            #self.assertTrue(False)
 
 
 if __name__ == "__main__":
