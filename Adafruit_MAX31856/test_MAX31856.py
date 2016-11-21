@@ -25,10 +25,10 @@ import unittest
 import Adafruit_GPIO.SPI as SPI
 
 # Local Imports
-import MAX31856
+from max31856 import MAX31856 as MAX31856
 
 logging.basicConfig(filename='test_MAX31856.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 class Adafruit_MAX31856(unittest.TestCase):
     
@@ -38,11 +38,11 @@ class Adafruit_MAX31856(unittest.TestCase):
         Will fail if it cannot find the MAX31856 library or any dependencies.
         Test only checks to see that the sensor can be initialized in Software, does not check the hardware connection.
         '''
-        
+        _logger.debug('test_hardware_SPI_initialize()')
         # Raspberry Pi hardware SPI configuration.
         SPI_PORT   = 0
         SPI_DEVICE = 0
-        sensor = MAX31856.MAX31856(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE))
+        sensor = MAX31856(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE))
         
         if sensor:
             self.assertTrue(True)
@@ -52,34 +52,54 @@ class Adafruit_MAX31856(unittest.TestCase):
     def test_get_register_reading(self):
         '''Checks to see if we can read a register from the device.  Good test for correct connectivity.
         '''
-        
+        _logger.debug('test_get_register_reading()')
         # Raspberry Pi hardware SPI configuration.
         SPI_PORT   = 0
         SPI_DEVICE = 0
-        sensor = MAX31856.MAX31856(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE))
+        sensor = MAX31856(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE))
         
         value = sensor._read_register(MAX31856.MAX31856_REG_READ_CR0)
-        
+        for ii in xrange(0x00, 0x0F):
+            # Read all of the registers, will store data to log
+            sensor._read_register(ii)
+        #import pdb; pdb.set_trace()        
         if value:
             self.assertTrue(True)
         else:
             self.assertTrue(False)
 
-    #def test_get_temperaure_reading(self):
-        #'''Checks to see if we can read a temperature from the board, using Hardware SPI
-        #'''
+    def test_get_temperaure_reading(self):
+        '''Checks to see if we can read a temperature from the board, using Hardware SPI
+        '''
+        _logger.debug('test_get_temperature_reading')
+        # Raspberry Pi hardware SPI configuration.
+        SPI_PORT   = 0
+        SPI_DEVICE = 0
+        sensor = MAX31856(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE))
+        
+        temp = sensor.readTempC()
 
-        ## Raspberry Pi hardware SPI configuration.
-        #SPI_PORT   = 0
-        #SPI_DEVICE = 0
-        #sensor = MAX31856.MAX31856(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE))
+        if temp:
+            self.assertTrue(True)
+        else:
+            self.assertTrue(False)
 
-        #temp = sensor.readTempC()
 
-        #if temp:
-            #self.assertTrue(True)
-        #else:
-            #self.assertTrue(False)
+    def test_get_internal_temperaure_reading(self):
+        '''Checks to see if we can read a temperature from the board, using Hardware SPI
+        '''
+        _logger.debug('test_get_internal_temperature_reading()')
+        # Raspberry Pi hardware SPI configuration.
+        SPI_PORT   = 0
+        SPI_DEVICE = 0
+        sensor = MAX31856(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE))
+
+        temp = sensor.readInternalTempC()
+
+        if temp:
+            self.assertTrue(True)
+        else:
+            self.assertTrue(False)
 
 
 if __name__ == "__main__":

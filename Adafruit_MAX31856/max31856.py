@@ -36,10 +36,21 @@ class MAX31856(object):
     MAX31856_REG_READ_CR1 = 0x01
     MAX31856_REG_READ_MASK = 0x02
     MAX31856_REG_READ_CJHF = 0x03
+    MAX31856_REG_READ_LTCBL = 0x0E # Linearized TC Temperature, Byte 0
+    MAX31856_REG_READ_LTCBM = 0x0D
+    MAX31856_REG_READ_LTCBH = 0x0C
+    MAX31856_REG_READ_CJTL = 0x0B  # Cold-Junction Temperature Register, LSB
+    MAX31856_REG_READ_CJTH = 0x0A  # Cold-Junction Temperature Register, MSB
     
     # Write Addresses
-    MAX31856_REG_WRITE_CRo = 0x80
+    MAX31856_REG_WRITE_CR0 = 0x80
     MAX31856_REG_WRITE_CR1 = 0x81
+
+    # Pre-config Register Options
+    MAX31856_CR0_READ_ONE = 0x40 # One shot reading, delay approx. 200ms then read temp registers
+    MAX31856_CR0_READ_CONT = 0x80 # Continuous reading, delay approx. 100ms between readings
+    MAX31856_CR1_READ_T_TYPE = 0x07 # Read T Type Thermocouple
+    MAX31856_CR1_READ_K_TYPE = 0x03 # Read K Type Thermocouple
 
     def __init__(self, clk=None, cs=None, do=None, spi=None, gpio=None):
         """Initialize MAX31856 device with software SPI on the specified CLK,
@@ -61,41 +72,51 @@ class MAX31856(object):
         else:
             raise ValueError('Must specify either spi for for hardware SPI or clk, cs, and do for softwrare SPI!')
         self._spi.set_clock_hz(5000000)
-        self._spi.set_mode(0)
+        self._spi.set_mode(1) # According to Wikipedia (on SPI) and MAX31856 Datasheet, SPI mode 0 corresponds with correct timing, CPOL = 0, CPHA = 1
         self._spi.set_bit_order(SPI.MSBFIRST)
 
+        # Setup for reading continuously with T-Type thermocouple 
+        self._write_register(self.MAX31856_REG_WRITE_CR0, self.MAX31856_CR0_READ_CONT)
+        self._write_register(self.MAX31856_REG_WRITE_CR1, self.MAX31856_CR1_READ_T_TYPE)
 
-    def readInternalC(self):
+
+    def readInternalTempC(self):
         """Return internal temperature value in degrees celsius."""
-        v = self._read32()
-        # Ignore bottom 4 bits of thermocouple data.
-        v >>= 4
-        # Grab bottom 11 bits as internal temperature data.
-        internal = v & 0x7FF
-        if v & 0x800:
-            # Negative value, take 2's compliment. Compute this with subtraction
-            # because python is a little odd about handling signed/unsigned.
-            internal -= 4096
-        # Scale by 0.0625 degrees C per bit and return value.
-        return internal * 0.0625
+        val_low_byte = self._read_register(self.MAX31856_REG_READ_CJTL)
+        val_high_byte = self._read_register(self.MAX31856_REG_READ_CJTH)
+
+        ## Ignore bottom 4 bits of thermocouple data.
+        #v >>= 4
+        ## Grab bottom 11 bits as internal temperature data.
+        #internal = v & 0x7FF
+        #if v & 0x800:
+        #    # Negative value, take 2's compliment. Compute this with subtraction
+        #    # because python is a little odd about handling signed/unsigned.
+        #    internal -= 4096
+        ## Scale by 0.0625 degrees C per bit and return value.
+        return val_high_byte
 
     def readTempC(self):
         """Return the thermocouple temperature value in degrees celsius."""
-        v = self._read32()
-        # Check for error reading value.
-        if v & 0x7:
-            return float('NaN')
-        # Check if signed bit is set.
-        if v & 0x80000000:
-            # Negative value, take 2's compliment. Compute this with subtraction
-            # because python is a little odd about handling signed/unsigned.
-            v >>= 18
-            v -= 16384
-        else:
-            # Positive value, just shift the bits to get the value.
-            v >>= 18
-        # Scale by 0.25 degrees C per bit and return value.
-        return v * 0.25
+        val_low_byte = self._read_register(self.MAX31856_REG_READ_LTCBL)
+        val_mid_byte = self._read_register(self.MAX31856_REG_READ_LTCBM)
+        val_high_byte = self._read_register(self.MAX31856_REG_READ_LTCBH)
+
+        ## Check for error reading value.
+        #if v & 0x7:
+        #    return float('NaN')
+        ## Check if signed bit is set.
+        #if v & 0x80000000:
+        #    # Negative value, take 2's compliment. Compute this with subtraction
+        #    # because python is a little odd about handling signed/unsigned.
+        #    v >>= 18
+        #    v -= 16384
+        #else:
+        #    # Positive value, just shift the bits to get the value.
+        #    v >>= 18
+        ## Scale by 0.25 degrees C per bit and return value.
+        #return v * 0.25
+        return val_high_byte
 
     def readState(self):
         """Return dictionary containing fault codes and hardware problems
@@ -196,7 +217,7 @@ class MAX31856(object):
             raise RuntimeError('Did not read expected number of bytes from device!')
         
         value = raw[1]
-        self._logger.debug('Raw Value: 0x{0:04X}'.format(value & 0xFFFF))
+        self._logger.debug('Read Register: 0x{0:02X}, Raw Value: 0x{1:02X}'.format( (address & 0xFFFF), (value & 0xFFFF) ))
         return value
     
     def _write_register(self, address, write_value):
@@ -206,7 +227,10 @@ class MAX31856(object):
             address (8-bit Hex): Address for read register.  Format 0Xh. Constants listed in class as MAX31856_REG_WRITE_*
             write_value (8-bit Hex): Value to write to the register
         '''
-        pass
+        self._spi.transfer([address, write_value])
+        self._logger.debug('Wrote Register: 0x{0:02X}, Value 0x{1:02X}'.format( (address & 0xFF), (write_value & 0xFF) ) )
+        
+        return True # If we've gotten this far without an exception, the transmission must've gone through
         
 
     def _read32(self):
