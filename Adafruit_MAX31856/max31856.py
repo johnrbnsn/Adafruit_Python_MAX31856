@@ -60,7 +60,7 @@ class MAX31856(object):
     MAX31856_T_TYPE = 0x7 # Read T Type Thermocouple
     
     
-    def __init__(self, tc_type=self.MAX31856_K_TYPE, avgsel=0x0, clk=None, cs=None, do=None, di=None, spi=None):
+    def __init__(self, tc_type=MAX31856_T_TYPE, avgsel=0x0, clk=None, cs=None, do=None, di=None, spi=None):
         """Initialize MAX31856 device with software SPI on the specified CLK,
         CS, and DO pins.  Alternatively can specify hardware SPI by sending an
         Adafruit_GPIO.SPI.SpiDev device in the spi parameter.
@@ -76,7 +76,7 @@ class MAX31856(object):
         """
         self._logger = logging.getLogger('Adafruit_MAX31856.MAX31856')
         self._spi = None
-        self.thermocouple_type = thermocouple_type
+        self.tc_type = tc_type
         self.avgsel = avgsel
         # Handle hardware SPI
         if spi is not None:
@@ -94,7 +94,7 @@ class MAX31856(object):
         self._spi.set_mode(1) # According to Wikipedia (on SPI) and MAX31856 Datasheet, SPI mode 0 corresponds with correct timing, CPOL = 0, CPHA = 1
         self._spi.set_bit_order(SPI.MSBFIRST)
         
-        self.CR1 = ((self.avgsel << 1) + self.thermocouple_type)
+        self.CR1 = ((self.avgsel << 1) + self.tc_type)
 
         # Setup for reading continuously with T-Type thermocouple 
         self._write_register(self.MAX31856_REG_WRITE_CR0, self.MAX31856_CR0_READ_CONT)
