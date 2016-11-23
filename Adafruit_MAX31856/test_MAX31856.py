@@ -59,10 +59,10 @@ class Adafruit_MAX31856(unittest.TestCase):
         sensor = MAX31856(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE))
         
         value = sensor._read_register(MAX31856.MAX31856_REG_READ_CR0)
-        for ii in xrange(0x00, 0x0F):
+        for ii in xrange(0x00, 0x10):
             # Read all of the registers, will store data to log
             sensor._read_register(ii)
-        #import pdb; pdb.set_trace()        
+        
         if value:
             self.assertTrue(True)
         else:

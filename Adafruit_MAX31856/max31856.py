@@ -49,16 +49,35 @@ class MAX31856(object):
     # Pre-config Register Options
     MAX31856_CR0_READ_ONE = 0x40 # One shot reading, delay approx. 200ms then read temp registers
     MAX31856_CR0_READ_CONT = 0x80 # Continuous reading, delay approx. 100ms between readings
-    MAX31856_CR1_READ_T_TYPE = 0x07 # Read T Type Thermocouple
-    MAX31856_CR1_READ_K_TYPE = 0x03 # Read K Type Thermocouple
-
-    def __init__(self, clk=None, cs=None, do=None, spi=None, gpio=None):
+    
+    MAX31856_B_TYPE = 0x0 # Read B Type Thermocouple
+    MAX31856_E_TYPE = 0x1 # Read E Type Thermocouple
+    MAX31856_J_TYPE = 0x2 # Read J Type Thermocouple
+    MAX31856_K_TYPE = 0x3 # Read K Type Thermocouple
+    MAX31856_N_TYPE = 0x4 # Read N Type Thermocouple
+    MAX31856_R_TYPE = 0x5 # Read R Type Thermocouple
+    MAX31856_S_TYPE = 0x6 # Read S Type Thermocouple
+    MAX31856_T_TYPE = 0x7 # Read T Type Thermocouple
+    
+    
+    def __init__(self, tc_type=self.MAX31856_K_TYPE, avgsel=0x0, clk=None, cs=None, do=None, di=None, spi=None):
         """Initialize MAX31856 device with software SPI on the specified CLK,
         CS, and DO pins.  Alternatively can specify hardware SPI by sending an
         Adafruit_GPIO.SPI.SpiDev device in the spi parameter.
+        
+        Args:
+            tc_type (1-byte Hex): Type of Thermocouple.  Choose from class variables of the form MAX31856.MAX31856_X_TYPE.
+            avgsel (1-byte Hex): Type of Averaging.  Choose from values in CR0 table of datasheet.  Default is single sample.
+            clk (integer): Pin number for software SPI clk
+            cs (integer): Pin number for software SPI cs
+            do (integer): Pin number for software SPI MISO
+            di (integer): Pin number for software SPI MOSI
+            spi (Adafruit_GPIO.SPI.SpiDev): If using hardware SPI, define the connection
         """
         self._logger = logging.getLogger('Adafruit_MAX31856.MAX31856')
         self._spi = None
+        self.thermocouple_type = thermocouple_type
+        self.avgsel = avgsel
         # Handle hardware SPI
         if spi is not None:
             self._logger.debug('Using hardware SPI')
@@ -74,60 +93,61 @@ class MAX31856(object):
         self._spi.set_clock_hz(5000000)
         self._spi.set_mode(1) # According to Wikipedia (on SPI) and MAX31856 Datasheet, SPI mode 0 corresponds with correct timing, CPOL = 0, CPHA = 1
         self._spi.set_bit_order(SPI.MSBFIRST)
+        
+        self.CR1 = ((self.avgsel << 1) + self.thermocouple_type)
 
         # Setup for reading continuously with T-Type thermocouple 
         self._write_register(self.MAX31856_REG_WRITE_CR0, self.MAX31856_CR0_READ_CONT)
-        self._write_register(self.MAX31856_REG_WRITE_CR1, self.MAX31856_CR1_READ_T_TYPE)
+        self._write_register(self.MAX31856_REG_WRITE_CR1, self.CR1)
 
 
     def readInternalTempC(self):
         """Return internal temperature value in degrees celsius."""
         val_low_byte = self._read_register(self.MAX31856_REG_READ_CJTL)
         val_high_byte = self._read_register(self.MAX31856_REG_READ_CJTH)
-
-        ## Ignore bottom 4 bits of thermocouple data.
-        #v >>= 4
-        ## Grab bottom 11 bits as internal temperature data.
-        #internal = v & 0x7FF
-        #if v & 0x800:
-        #    # Negative value, take 2's compliment. Compute this with subtraction
-        #    # because python is a little odd about handling signed/unsigned.
-        #    internal -= 4096
-        ## Scale by 0.0625 degrees C per bit and return value.
-        return val_high_byte
+        
+        #        ( ((val_high_byte w/o +/-) shifted by number of bits above LSB)
+        #                                        + val_low_byte )*value of LSB
+        temp_C = ( ((val_high_byte & 0x7F) << 6) + val_low_byte )*2**-6
+        
+        if val_high_byte & 0x80:
+            # Negative Value.  
+            temp_C = -1.0*temp_C
+            
+        self._logger.debug("Cold Junction Temperature {0} deg. C".format(temp_C))
+        
+        return temp_C
+    
 
     def readTempC(self):
         """Return the thermocouple temperature value in degrees celsius."""
         val_low_byte = self._read_register(self.MAX31856_REG_READ_LTCBL)
         val_mid_byte = self._read_register(self.MAX31856_REG_READ_LTCBM)
         val_high_byte = self._read_register(self.MAX31856_REG_READ_LTCBH)
+            
+        #        ( ((val_high_byte w/o +/-) shifted by number of bits above LSB)
+        #                                         + (val_mid_byte shifted by number of bits above LSB)
+        #                                                               + val_low_byte )*value of LSB
+        temp_C = ( ((val_high_byte & 0x7F) << 11) + (val_mid_byte << 3) + val_low_byte )*2**-7
 
-        ## Check for error reading value.
-        #if v & 0x7:
-        #    return float('NaN')
-        ## Check if signed bit is set.
-        #if v & 0x80000000:
-        #    # Negative value, take 2's compliment. Compute this with subtraction
-        #    # because python is a little odd about handling signed/unsigned.
-        #    v >>= 18
-        #    v -= 16384
-        #else:
-        #    # Positive value, just shift the bits to get the value.
-        #    v >>= 18
-        ## Scale by 0.25 degrees C per bit and return value.
-        #return v * 0.25
-        return val_high_byte
+        if val_high_byte & 0x80:
+            # Negative Value.  
+            temp_C = -1.0*temp_C
+        
+        self._logger.debug("Thermocouple Temperature {0} deg. C".format(temp_C))
+        
+        return temp_C
 
-    def readState(self):
-        """Return dictionary containing fault codes and hardware problems
-        """
-        v = self._read32()
-        return {
-            'openCircuit': (v & (1 << 0)) > 0,
-            'shortGND': (v & (1 << 1)) > 0,
-            'shortVCC': (v & (1 << 2)) > 0,
-            'fault': (v & (1 << 16)) > 0
-        }
+    #def readState(self):
+        #"""Return dictionary containing fault codes and hardware problems
+        #"""
+        #v = self._read32()
+        #return {
+            #'openCircuit': (v & (1 << 0)) > 0,
+            #'shortGND': (v & (1 << 1)) > 0,
+            #'shortVCC': (v & (1 << 2)) > 0,
+            #'fault': (v & (1 << 16)) > 0
+        #}
 
     #def readLinearizedTempC(self):
         #"""Return the NIST-linearized thermocouple temperature value in degrees celsius.
@@ -220,6 +240,7 @@ class MAX31856(object):
         self._logger.debug('Read Register: 0x{0:02X}, Raw Value: 0x{1:02X}'.format( (address & 0xFFFF), (value & 0xFFFF) ))
         return value
     
+    
     def _write_register(self, address, write_value):
         '''Writes to a register at address from the MAX31856
         
@@ -231,13 +252,5 @@ class MAX31856(object):
         self._logger.debug('Wrote Register: 0x{0:02X}, Value 0x{1:02X}'.format( (address & 0xFF), (write_value & 0xFF) ) )
         
         return True # If we've gotten this far without an exception, the transmission must've gone through
-        
-
-    def _read32(self):
-        # Read 32 bits from the SPI bus.
-        raw = self._spi.read(4)
-        if raw is None or len(raw) != 4:
-            raise RuntimeError('Did not read expected number of bytes from device!')
-        value = raw[0] << 24 | raw[1] << 16 | raw[2] << 8 | raw[3]
-        self._logger.debug('Raw value: 0x{0:08X}'.format(value & 0xFFFFFFFF))
-        return value
+    
+    
