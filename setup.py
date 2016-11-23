@@ -8,7 +8,7 @@ except ImportError:
 
 from setuptools import setup, find_packages
 
-setup(name              = 'MAX31856',
+setup(name              = 'Adafruit_MAX31856',
       version           = '0.0.1',
       author            = 'John Robinson',
       author_email      = 'john.rbnsn@gmail.com',

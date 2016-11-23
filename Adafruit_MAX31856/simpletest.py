@@ -25,7 +25,7 @@ import time
 import Adafruit_GPIO.SPI as SPI
 
 # Local Imports
-from Adafruit_MAX31856 import MAX31856 as MAX31856
+from max31856 import MAX31856 as MAX31856
 
 logging.basicConfig(filename='simpletest.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 _logger = logging.getLogger(__name__)

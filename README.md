@@ -26,13 +26,17 @@ git clone https://github.com/johnrbnsn/Adafruit_Python_MAX31856.git
 Running Example/ Tests
 ----------------------
 
-cd into the cloned repository and run the following command if you want the library installed (you can run tests without installing, but examples will not work):
+From within the cloned directory run the following command if you want the library installed (you can run tests without installing, but examples will not work):
 
 ````
-sudo python setup.py install
+sudo pip install ./.
 ````
 
-Examples are in the examples directory, or tests are in the [Adafruit\_MAX31856] (https://github.com/johnrbnsn/Adafruit_Python_MAX31856/tree/master/Adafruit_MAX31856) directory.
+Examples are in the examples directory, or tests are in the [Adafruit\_MAX31856] (https://github.com/johnrbnsn/Adafruit_Python_MAX31856/tree/master/Adafruit_MAX31856) directory.  From within this directory, run simpletest.py:
+
+````
+python simpletest.py
+````
 
 Debugging
 ---------
