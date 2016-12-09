@@ -159,9 +159,9 @@ class MAX31856(object):
         if val_high_byte & 0x80:
             # Negative Value.  Scale back by number of bits
             temp_bytes -= 2**self.MAX31856_CONST_THERM_BITS
-        else:
-            #        temp_bytes*value of LSB
-            temp_C = temp_bytes*self.MAX31856_CONST_THERM_LSB
+        
+        #        temp_bytes*value of LSB
+        temp_C = temp_bytes*self.MAX31856_CONST_THERM_LSB
         
         self._logger.debug("Thermocouple Temperature {0} deg. C".format(temp_C))
         
