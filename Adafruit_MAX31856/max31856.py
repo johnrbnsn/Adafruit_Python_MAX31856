@@ -30,26 +30,50 @@ class MAX31856(object):
     measurement board.
     """
     
+    # Board Specific Constants
+    MAX31856_CONST_THERM_LSB = 2**-7
+    MAX31856_CONST_THERM_BITS = 19
+    MAX31856_CONST_CJ_LSB = 2**-6
+    MAX31856_CONST_CJ_BITS = 14
+    
     ### Register constants, see data sheet Table 6 (in Rev. 0) for info.
     # Read Addresses
-    MAX31856_REG_READ_CR0 = 0x00   
+    MAX31856_REG_READ_CR0 = 0x00
     MAX31856_REG_READ_CR1 = 0x01
     MAX31856_REG_READ_MASK = 0x02
     MAX31856_REG_READ_CJHF = 0x03
-    MAX31856_REG_READ_LTCBL = 0x0E # Linearized TC Temperature, Byte 0
-    MAX31856_REG_READ_LTCBM = 0x0D
-    MAX31856_REG_READ_LTCBH = 0x0C
-    MAX31856_REG_READ_CJTL = 0x0B  # Cold-Junction Temperature Register, LSB
+    MAX31856_REG_READ_CJLF = 0x04
+    MAX31856_REG_READ_LTHFTH = 0x05
+    MAX31856_REG_READ_LTHFTL = 0x06
+    MAX31856_REG_READ_LTLFTH = 0x07
+    MAX31856_REG_READ_LTLFTL = 0x08
+    MAX31856_REG_READ_CJTO = 0x09
     MAX31856_REG_READ_CJTH = 0x0A  # Cold-Junction Temperature Register, MSB
+    MAX31856_REG_READ_CJTL = 0x0B  # Cold-Junction Temperature Register, LSB
+    MAX31856_REG_READ_LTCBH = 0x0C # Linearized TC Temperature, Byte 2
+    MAX31856_REG_READ_LTCBM = 0x0D # Linearized TC Temperature, Byte 1
+    MAX31856_REG_READ_LTCBL = 0x0E # Linearized TC Temperature, Byte 0
+    MAX31856_REG_READ_FAULT = 0x0F # Fault status register
     
     # Write Addresses
     MAX31856_REG_WRITE_CR0 = 0x80
     MAX31856_REG_WRITE_CR1 = 0x81
-
+    MAX31856_REG_WRITE_MASK = 0x82
+    MAX31856_REG_WRITE_CJHF = 0x83
+    MAX31856_REG_WRITE_CJLF = 0x84
+    MAX31856_REG_WRITE_LTHFTH = 0x85
+    MAX31856_REG_WRITE_LTHFTL = 0x86
+    MAX31856_REG_WRITE_LTLFTH = 0x87
+    MAX31856_REG_WRITE_LTLFTL = 0x88
+    MAX31856_REG_WRITE_CJTO = 0x89
+    MAX31856_REG_WRITE_CJTH = 0x8A  # Cold-Junction Temperature Register, MSB
+    MAX31856_REG_WRITE_CJTL = 0x8B  # Cold-Junction Temperature Register, LSB
+    
     # Pre-config Register Options
     MAX31856_CR0_READ_ONE = 0x40 # One shot reading, delay approx. 200ms then read temp registers
     MAX31856_CR0_READ_CONT = 0x80 # Continuous reading, delay approx. 100ms between readings
     
+    # Thermocouple Types
     MAX31856_B_TYPE = 0x0 # Read B Type Thermocouple
     MAX31856_E_TYPE = 0x1 # Read E Type Thermocouple
     MAX31856_J_TYPE = 0x2 # Read J Type Thermocouple
@@ -99,126 +123,60 @@ class MAX31856(object):
         # Setup for reading continuously with T-Type thermocouple 
         self._write_register(self.MAX31856_REG_WRITE_CR0, self.MAX31856_CR0_READ_CONT)
         self._write_register(self.MAX31856_REG_WRITE_CR1, self.CR1)
-
-
+    
+    
     def readInternalTempC(self):
         """Return internal temperature value in degrees celsius."""
         val_low_byte = self._read_register(self.MAX31856_REG_READ_CJTL)
         val_high_byte = self._read_register(self.MAX31856_REG_READ_CJTH)
         
         #        ( ((val_high_byte w/o +/-) shifted by number of bits above LSB)
-        #                                        + val_low_byte )*value of LSB
-        temp_C = ( ((val_high_byte & 0x7F) << 6) + val_low_byte )*2**-6
+        #                                            + val_low_byte )
+        temp_bytes = ( ((val_high_byte & 0x7F) << 6) + val_low_byte )
         
         if val_high_byte & 0x80:
-            # Negative Value.  
-            temp_C = -1.0*temp_C
-            
+            # Negative Value.  Scale back by number of bits
+            temp_bytes -= 2**MAX31856_CONST_CJ_BITS
+        
+        #        temp_bytes*value of LSB
+        temp_C = temp_bytes*MAX31856_CONST_CJ_LSB
         self._logger.debug("Cold Junction Temperature {0} deg. C".format(temp_C))
         
         return temp_C
     
-
+    
     def readTempC(self):
         """Return the thermocouple temperature value in degrees celsius."""
         val_low_byte = self._read_register(self.MAX31856_REG_READ_LTCBL)
         val_mid_byte = self._read_register(self.MAX31856_REG_READ_LTCBM)
         val_high_byte = self._read_register(self.MAX31856_REG_READ_LTCBH)
-            
-        #        ( ((val_high_byte w/o +/-) shifted by number of bits above LSB)
-        #                                         + (val_mid_byte shifted by number of bits above LSB)
-        #                                                               + val_low_byte )*value of LSB
-        temp_C = ( ((val_high_byte & 0x7F) << 11) + (val_mid_byte << 3) + val_low_byte )*2**-7
-
+        
+        #            ( ((val_high_byte w/o +/-) shifted by number of bits above LSB)
+        #                                             + (val_mid_byte shifted by number of bits above LSB)
+        #                                                                   + val_low_byte )
+        temp_bytes = ( ((val_high_byte & 0x7F) << 11) + (val_mid_byte << 3) + val_low_byte )
+        
         if val_high_byte & 0x80:
-            # Negative Value.  
-            temp_C = -1.0*temp_C
+            # Negative Value.  Scale back by number of bits
+            temp_bytes -= 2**MAX31856_CONST_THERM_BITS
+        else:
+            #        temp_bytes*value of LSB
+            temp_C = temp_bytes*MAX31856_CONST_THERM_LSB
         
         self._logger.debug("Thermocouple Temperature {0} deg. C".format(temp_C))
         
         return temp_C
-
-    #def readState(self):
-        #"""Return dictionary containing fault codes and hardware problems
-        #"""
-        #v = self._read32()
-        #return {
-            #'openCircuit': (v & (1 << 0)) > 0,
-            #'shortGND': (v & (1 << 1)) > 0,
-            #'shortVCC': (v & (1 << 2)) > 0,
-            #'fault': (v & (1 << 16)) > 0
-        #}
-
-    #def readLinearizedTempC(self):
-        #"""Return the NIST-linearized thermocouple temperature value in degrees celsius.
-        #See https://learn.adafruit.com/calibrating-sensors/maxim-31855-linearization for more info.
-        #"""
-        ## MAX31855 thermocouple voltage reading in mV
-        #thermocoupleVoltage = (self.readTempC() - self.readInternalC()) * 0.041276
-        ## MAX31855 cold junction voltage reading in mV
-        #coldJunctionTemperature = self.readInternalC()
-        #coldJunctionVoltage = (-0.176004136860E-01 +
-            #0.389212049750E-01  * coldJunctionTemperature +
-            #0.185587700320E-04  * math.pow(coldJunctionTemperature, 2.0) +
-            #-0.994575928740E-07 * math.pow(coldJunctionTemperature, 3.0) +
-            #0.318409457190E-09  * math.pow(coldJunctionTemperature, 4.0) +
-            #-0.560728448890E-12 * math.pow(coldJunctionTemperature, 5.0) +
-            #0.560750590590E-15  * math.pow(coldJunctionTemperature, 6.0) +
-            #-0.320207200030E-18 * math.pow(coldJunctionTemperature, 7.0) +
-            #0.971511471520E-22  * math.pow(coldJunctionTemperature, 8.0) +
-            #-0.121047212750E-25 * math.pow(coldJunctionTemperature, 9.0) +
-            #0.118597600000E+00  * math.exp(-0.118343200000E-03 * math.pow((coldJunctionTemperature-0.126968600000E+03), 2.0)))
-        ## cold junction voltage + thermocouple voltage
-        #voltageSum = thermocoupleVoltage + coldJunctionVoltage
-        ## calculate corrected temperature reading based on coefficients for 3 different ranges
-        ## float b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10;
-        #if thermocoupleVoltage < 0:
-            #b0 = 0.0000000E+00
-            #b1 = 2.5173462E+01
-            #b2 = -1.1662878E+00
-            #b3 = -1.0833638E+00
-            #b4 = -8.9773540E-01
-            #b5 = -3.7342377E-01
-            #b6 = -8.6632643E-02
-            #b7 = -1.0450598E-02
-            #b8 = -5.1920577E-04
-            #b9 = 0.0000000E+00
-        #elif thermocoupleVoltage < 20.644:
-            #b0 = 0.000000E+00
-            #b1 = 2.508355E+01
-            #b2 = 7.860106E-02
-            #b3 = -2.503131E-01
-            #b4 = 8.315270E-02
-            #b5 = -1.228034E-02
-            #b6 = 9.804036E-04
-            #b7 = -4.413030E-05
-            #b8 = 1.057734E-06
-            #b9 = -1.052755E-08
-        #elif thermocoupleVoltage < 54.886:
-            #b0 = -1.318058E+02
-            #b1 = 4.830222E+01
-            #b2 = -1.646031E+00
-            #b3 = 5.464731E-02
-            #b4 = -9.650715E-04
-            #b5 = 8.802193E-06
-            #b6 = -3.110810E-08
-            #b7 = 0.000000E+00
-            #b8 = 0.000000E+00
-            #b9 = 0.000000E+00
-        #else:
-            ## TODO: handle error - out of range
-            #return 0
-        #return (b0 +
-            #b1 * voltageSum +
-            #b2 * pow(voltageSum, 2.0) +
-            #b3 * pow(voltageSum, 3.0) +
-            #b4 * pow(voltageSum, 4.0) +
-            #b5 * pow(voltageSum, 5.0) +
-            #b6 * pow(voltageSum, 6.0) +
-            #b7 * pow(voltageSum, 7.0) +
-            #b8 * pow(voltageSum, 8.0) +
-            #b9 * pow(voltageSum, 9.0))
-            
+    
+    
+    def read_fault_register(self):
+        """Return bytes containing fault codes and hardware problems.  
+        
+        TODO: Could update in the future to return human readable values
+        """
+        v = self._read_register(self.MAX31856_REG_READ_FAULT)
+        return v
+    
+    
     def _read_register(self, address):
         '''Reads a register at address from the MAX31856
         
