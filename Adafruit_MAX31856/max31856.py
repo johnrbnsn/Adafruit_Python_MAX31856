@@ -124,26 +124,65 @@ class MAX31856(object):
         self._write_register(self.MAX31856_REG_WRITE_CR0, self.MAX31856_CR0_READ_CONT)
         self._write_register(self.MAX31856_REG_WRITE_CR1, self.CR1)
     
+    def _cjTempFromBytes(MSB, LSB):
+        """Takes in the MSB and LSB from a Cold Junction (CJ) temperature reading and converts it into a decimal value.
+        
+        This function was removed from readInternalTempC() and moved to its own method to allow for easier testing with standard values.
+        
+        Args:
+            MSB (hex): Most significant byte of CJ temperature
+            LSB (hex): Least significant byte of a CJ temperature
+        
+        """
+        #            ( ((MSB w/o +/-) shifted by number of 1 byte above LSB)
+        #                                  + val_low_byte ) 
+        #                                          >> shifted back by # of dead bits
+        temp_bytes = ( ((MSB & 0x7F) << 8) + LSB ) >> 2
+        
+        if MSB & 0x80:
+            # Negative Value.  Scale back by number of bits
+            temp_bytes -= 2**(MAX31856.MAX31856_CONST_CJ_BITS -1)
+        
+        #        temp_bytes*value of LSB
+        temp_C = temp_bytes*MAX31856.MAX31856_CONST_CJ_LSB
+        
+        return temp_C
     
     def readInternalTempC(self):
         """Return internal temperature value in degrees celsius."""
         val_low_byte = self._read_register(self.MAX31856_REG_READ_CJTL)
         val_high_byte = self._read_register(self.MAX31856_REG_READ_CJTH)
         
-        #        ( ((val_high_byte w/o +/-) shifted by number of bits above LSB)
-        #                                            + val_low_byte )
-        temp_bytes = ( ((val_high_byte & 0x7F) << 6) + val_low_byte )
-        
-        if val_high_byte & 0x80:
-            # Negative Value.  Scale back by number of bits
-            temp_bytes -= 2**(self.MAX31856_CONST_CJ_BITS -1)
-        
-        #        temp_bytes*value of LSB
-        temp_C = temp_bytes*self.MAX31856_CONST_CJ_LSB
+        temp_C = MAX31856._cjTempFromBytes(val_high_byte, val_low_byte)
         self._logger.debug("Cold Junction Temperature {0} deg. C".format(temp_C))
         
         return temp_C
     
+    def _thermocoupleTempFromBytes(byte0, byte1, byte2):
+        """Converts the thermocouple byte values to a decimal value.
+        
+        This function was removed from readInternalTempC() and moved to its own method to allow for easier testing with standard values.
+        
+        Args:
+            byte2 (hex): Most significant byte of thermocouple temperature
+            byte1 (hex): Middle byte of thermocouple temperature
+            byte0 (hex): Least significant byte of a thermocouple temperature
+        
+        """
+        #            ( ((val_high_byte w/o +/-) shifted by 2 bytes above LSB)
+        #                 + (val_mid_byte shifted by number 1 byte above LSB)
+        #                                             + val_low_byte )
+        #                              >> back shift by number of dead bits 
+        temp_bytes = ( ((byte2 & 0x7F) << 16) + (byte1 << 8) + byte0 ) 
+        temp_bytes = temp_bytes >> 5
+        
+        if byte2 & 0x80:
+            temp_bytes -= 2**(MAX31856.MAX31856_CONST_THERM_BITS -1)
+        
+        #        temp_bytes*value of LSB
+        temp_C = temp_bytes*MAX31856.MAX31856_CONST_THERM_LSB
+        
+        return temp_C
     
     def readTempC(self):
         """Return the thermocouple temperature value in degrees celsius."""
@@ -151,17 +190,7 @@ class MAX31856(object):
         val_mid_byte = self._read_register(self.MAX31856_REG_READ_LTCBM)
         val_high_byte = self._read_register(self.MAX31856_REG_READ_LTCBH)
         
-        #            ( ((val_high_byte w/o +/-) shifted by number of bits above LSB)
-        #                                             + (val_mid_byte shifted by number of bits above LSB)
-        #                                                                   + val_low_byte )
-        temp_bytes = ( ((val_high_byte & 0x7F) << 11) + (val_mid_byte << 3) + val_low_byte )
-        
-        if val_high_byte & 0x80:
-            # Negative Value.  Scale back by number of bits
-            temp_bytes -= 2**(self.MAX31856_CONST_THERM_BITS -1)
-        
-        #        temp_bytes*value of LSB
-        temp_C = temp_bytes*self.MAX31856_CONST_THERM_LSB
+        temp_C = MAX31856._thermocoupleTempFromBytes(val_low_byte, val_mid_byte, val_high_byte)
         
         self._logger.debug("Thermocouple Temperature {0} deg. C".format(temp_C))
         

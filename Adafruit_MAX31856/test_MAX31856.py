@@ -100,6 +100,61 @@ class Adafruit_MAX31856(unittest.TestCase):
             self.assertTrue(True)
         else:
             self.assertTrue(False)
+    
+    def test_temperature_byte_conversions(self):
+        '''Checks the byte conversion for various known temperature byte values.
+        '''
+        _logger.debug('test_temperature_byte_conversions()')
+        
+        #-------------------------------------------#
+        # Test Thermocouple Temperature Conversions #
+        byte2 = 0x01; byte1 = 0x70; byte0 = 0x20;  
+        decimal_temp = MAX31856._thermocoupleTempFromBytes(byte0, byte1, byte2)
+        self.assertEqual(decimal_temp, 23.0078125)
+        
+        # Check a couple values from the datasheet
+        byte2 = 0b00000001; byte1 = 0b10010000; byte0 = 0b00000000;
+        decimal_temp = MAX31856._thermocoupleTempFromBytes(byte0, byte1, byte2)
+        self.assertEqual(decimal_temp, 25.0)
+        
+        byte2 = 0b00000000; byte1 = 0b00000000; byte0 = 0b00000000;
+        decimal_temp = MAX31856._thermocoupleTempFromBytes(byte0, byte1, byte2)
+        self.assertEqual(decimal_temp, 0.0)
+        
+        byte2 = 0b11111111; byte1 = 0b11110000; byte0 = 0b00000000;
+        decimal_temp = MAX31856._thermocoupleTempFromBytes(byte0, byte1, byte2)
+        self.assertEqual(decimal_temp, -1.0)
+        
+        byte2 = 0b11110000; byte1 = 0b01100000; byte0 = 0b00000000;
+        decimal_temp = MAX31856._thermocoupleTempFromBytes(byte0, byte1, byte2)
+        self.assertEqual(decimal_temp, -250.0)
+        
+        #---------------------------------#
+        # Test CJ Temperature Conversions #
+        MSB = 0x1C; LSB = 0x64;
+        decimal_CJ_temp = MAX31856._cjTempFromBytes(MSB, LSB)
+        self.assertEqual(decimal_CJ_temp, 28.390625)
+        
+        # Check a couple values from the datasheet
+        MSB = 0b01111111; LSB = 0b11111100;
+        decimal_CJ_temp = MAX31856._cjTempFromBytes(MSB, LSB)
+        self.assertEqual(decimal_CJ_temp, 127.984375)
+        
+        MSB = 0b00011001; LSB = 0b00000000;
+        decimal_CJ_temp = MAX31856._cjTempFromBytes(MSB, LSB)
+        self.assertEqual(decimal_CJ_temp, 25)
+        
+        MSB = 0b00000000; LSB = 0b00000000;
+        decimal_CJ_temp = MAX31856._cjTempFromBytes(MSB, LSB)
+        self.assertEqual(decimal_CJ_temp, 0)
+        
+        MSB = 0b11100111; LSB = 0b00000000;
+        decimal_CJ_temp = MAX31856._cjTempFromBytes(MSB, LSB)
+        self.assertEqual(decimal_CJ_temp, -25)
+        
+        MSB = 0b11001001; LSB = 0b00000000;
+        decimal_CJ_temp = MAX31856._cjTempFromBytes(MSB, LSB)
+        self.assertEqual(decimal_CJ_temp, -55)
 
 
 if __name__ == "__main__":

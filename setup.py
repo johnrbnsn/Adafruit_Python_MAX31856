@@ -9,7 +9,7 @@ except ImportError:
 from setuptools import setup, find_packages
 
 setup(name              = 'Adafruit_MAX31856',
-      version           = '0.0.3',
+      version           = '0.0.4',
       author            = 'John Robinson',
       author_email      = 'john.rbnsn@gmail.com',
       description       = 'Library for accessing the MAX31856 thermocouple temperature sensor on a Raspberry Pi.',
