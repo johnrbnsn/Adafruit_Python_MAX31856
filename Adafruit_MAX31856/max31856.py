@@ -115,7 +115,7 @@ class MAX31856(object):
         else:
             raise ValueError('Must specify either spi for for hardware SPI or clk, cs, and do for softwrare SPI!')
         self._spi.set_clock_hz(5000000)
-        self._spi.set_mode(1) # According to Wikipedia (on SPI) and MAX31856 Datasheet, SPI mode 0 corresponds with correct timing, CPOL = 0, CPHA = 1
+        self._spi.set_mode(1) # According to Wikipedia (on SPI) and MAX31856 Datasheet, SPI mode 1 corresponds with correct timing, CPOL = 0, CPHA = 1
         self._spi.set_bit_order(SPI.MSBFIRST)
         
         self.CR1 = ((self.avgsel << 1) + self.tc_type)
