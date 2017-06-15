@@ -22,7 +22,8 @@
 # Global Imports
 import logging
 import unittest
-import Adafruit_GPIO
+import RPi.GPIO as GPIO
+import Adafruit_GPIO.SPI as SPI
 
 # Local Imports
 from max31856 import MAX31856 as MAX31856
@@ -31,23 +32,26 @@ logging.basicConfig(filename='test_MAX31856.log', level=logging.DEBUG, format='%
 _logger = logging.getLogger(__name__)
 
 class Adafruit_MAX31856(unittest.TestCase):
+    
+    def tearDown(self):
+        GPIO.cleanup()
 
-    def test_software_spi_initialize(self):
-        '''Checks to see if the sensor can initialize on the software SPI interface.
+    #def test_software_spi_initialize(self):
+        #'''Checks to see if the sensor can initialize on the software SPI interface.
 
-        Will fail if it cannot find the MAX31856 library or any dependencies.
-        Test only checks to see that the sensor can be initialized in Software, does not check the
-        hardware connection.
-        '''
-        _logger.debug('test_software_SPI_initialize()')
-        # Raspberry Pi software SPI configuration.
-        software_spi = {"clk": 25, "cs": 8, "do": 9, "di": 10}
-        sensor = MAX31856(software_spi=software_spi)
+        #Will fail if it cannot find the MAX31856 library or any dependencies.
+        #Test only checks to see that the sensor can be initialized in Software, does not check the
+        #hardware connection.
+        #'''
+        #_logger.debug('test_software_SPI_initialize()')
+        ## Raspberry Pi software SPI configuration.
+        #software_spi = {"clk": 25, "cs": 8, "do": 9, "di": 10}
+        #sensor = MAX31856(software_spi=software_spi)
 
-        if sensor:
-            self.assertTrue(True)
-        else:
-            self.assertTrue(False)
+        #if sensor:
+            #self.assertTrue(True)
+        #else:
+            #self.assertTrue(False)
 
     def test_hardware_spi_initialize(self):
         '''Checks to see if the sensor can initialize on the hardware SPI interface.
@@ -60,7 +64,7 @@ class Adafruit_MAX31856(unittest.TestCase):
         # Raspberry Pi hardware SPI configuration.
         spi_port = 0
         spi_device = 0
-        sensor = MAX31856(hardware_spi=Adafruit_GPIO.SPI.SpiDev(spi_port, spi_device))
+        sensor = MAX31856(hardware_spi=SPI.SpiDev(spi_port, spi_device))
 
         if sensor:
             self.assertTrue(True)
@@ -75,7 +79,7 @@ class Adafruit_MAX31856(unittest.TestCase):
         # Raspberry Pi hardware SPI configuration.
         spi_port = 0
         spi_device = 0
-        sensor = MAX31856(spi=Adafruit_GPIO.SPI.SpiDev(spi_port, spi_device))
+        sensor = MAX31856(hardware_spi=SPI.SpiDev(spi_port, spi_device))
 
         value = sensor._read_register(MAX31856.MAX31856_REG_READ_CR0)
         for ii in range(0x00, 0x10):
@@ -87,14 +91,29 @@ class Adafruit_MAX31856(unittest.TestCase):
         else:
             self.assertTrue(False)
 
+    #def test_get_temperaure_reading_software_spi(self):
+        #'''Checks to see if we can read a temperature from the board, using software SPI
+        #'''
+        #_logger.debug('test_get_temperature_reading_software_spi')
+        ## Raspberry Pi software SPI configuration.
+        #software_spi = {"clk": 25, "cs": 8, "do": 9, "di": 10}
+        #sensor = MAX31856(software_spi=software_spi)
+
+        #temp = sensor.read_temp_c()
+
+        #if temp:
+            #self.assertTrue(True)
+        #else:
+            #self.assertTrue(False)
+
     def test_get_temperaure_reading(self):
         '''Checks to see if we can read a temperature from the board, using Hardware SPI
         '''
-        _logger.debug('test_get_temperature_reading')
+        _logger.debug('test_get_temperaure_reading')
         # Raspberry Pi hardware SPI configuration.
         spi_port = 0
         spi_device = 0
-        sensor = MAX31856(spi=Adafruit_GPIO.SPI.SpiDev(spi_port, spi_device))
+        sensor = MAX31856(hardware_spi=SPI.SpiDev(spi_port, spi_device))
 
         temp = sensor.read_temp_c()
 
@@ -102,8 +121,7 @@ class Adafruit_MAX31856(unittest.TestCase):
             self.assertTrue(True)
         else:
             self.assertTrue(False)
-
-
+            
     def test_get_internal_temperaure_reading(self):
         '''Checks to see if we can read a temperature from the board, using Hardware SPI
         '''
@@ -111,7 +129,7 @@ class Adafruit_MAX31856(unittest.TestCase):
         # Raspberry Pi hardware SPI configuration.
         spi_port = 0
         spi_device = 0
-        sensor = MAX31856(spi=Adafruit_GPIO.SPI.SpiDev(spi_port, spi_device))
+        sensor = MAX31856(hardware_spi=SPI.SpiDev(spi_port, spi_device))
 
         temp = sensor.read_internal_temp_c()
 

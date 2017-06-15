@@ -25,8 +25,10 @@ THE SOFTWARE.
 '''
 import logging
 import warnings
+import math
 
 import Adafruit_GPIO as Adafruit_GPIO
+import Adafruit_GPIO.SPI as SPI
 
 class MAX31856(object):
     """Class to represent an Adafruit MAX31856 thermocouple temperature
@@ -90,7 +92,7 @@ class MAX31856(object):
     def __init__(self, tc_type=MAX31856_T_TYPE, avgsel=0x0, software_spi=None, hardware_spi=None, gpio=None):
         """Initialize MAX31856 device with software SPI on the specified CLK,
         CS, and DO pins.  Alternatively can specify hardware SPI by sending an
-        Adafruit_GPIO.SPI.SpiDev device in the spi parameter.
+        SPI.SpiDev device in the spi parameter.
 
         Args:
             tc_type (1-byte Hex): Type of Thermocouple.  Choose from class variables of the form
@@ -102,7 +104,7 @@ class MAX31856(object):
                 cs (integer): Pin number for software SPI cs
                 do (integer): Pin number for software SPI MISO
                 di (integer): Pin number for software SPI MOSI
-            hardware_spi (Adafruit_GPIO.SPI.SpiDev): If using hardware SPI, define the connection
+            hardware_spi (SPI.SpiDev): If using hardware SPI, define the connection
         """
         self._logger = logging.getLogger('Adafruit_MAX31856.MAX31856')
         self._spi = None
@@ -117,15 +119,15 @@ class MAX31856(object):
             # Default to platform GPIO if not provided.
             if gpio is None:
                 gpio = Adafruit_GPIO.get_platform_gpio()
-            self._spi = Adafruit_GPIO.SPI.BitBang(gpio, software_spi.clk, software_spi.di,
-                                                  software_spi.do, software_spi.cs)
+            self._spi = SPI.BitBang(gpio, software_spi['clk'], software_spi['di'],
+                                                  software_spi['do'], software_spi['cs'])
         else:
             raise ValueError('Must specify either spi for for hardware SPI or clk, cs, and do for softwrare SPI!')
         self._spi.set_clock_hz(5000000)
         # According to Wikipedia (on SPI) and MAX31856 Datasheet:
         #   SPI mode 1 corresponds with correct timing, CPOL = 0, CPHA = 1
         self._spi.set_mode(1)
-        self._spi.set_bit_order(Adafruit_GPIO.SPI.MSBFIRST)
+        self._spi.set_bit_order(SPI.MSBFIRST)
 
         self.cr1 = ((self.avgsel << 4) + self.tc_type)
 
