@@ -25,11 +25,8 @@ THE SOFTWARE.
 '''
 import logging
 import warnings
-import math
 
 import Adafruit_GPIO as Adafruit_GPIO
-import Adafruit_GPIO.SPI as SPI
-
 
 class MAX31856(object):
     """Class to represent an Adafruit MAX31856 thermocouple temperature
@@ -90,7 +87,7 @@ class MAX31856(object):
     MAX31856_T_TYPE = 0x7 # Read T Type Thermocouple
 
 
-    def __init__(self, tc_type=MAX31856_T_TYPE, avgsel=0x0, clk=None, cs=None, do=None, di=None, spi=None, gpio=None):
+    def __init__(self, tc_type=MAX31856_T_TYPE, avgsel=0x0, software_spi=None, hardware_spi=None, gpio=None):
         """Initialize MAX31856 device with software SPI on the specified CLK,
         CS, and DO pins.  Alternatively can specify hardware SPI by sending an
         Adafruit_GPIO.SPI.SpiDev device in the spi parameter.
@@ -100,26 +97,28 @@ class MAX31856(object):
                 MAX31856.MAX31856_X_TYPE.
             avgsel (1-byte Hex): Type of Averaging.  Choose from values in CR0 table of datasheet.
                 Default is single sample.
-            clk (integer): Pin number for software SPI clk
-            cs (integer): Pin number for software SPI cs
-            do (integer): Pin number for software SPI MISO
-            di (integer): Pin number for software SPI MOSI
-            spi (Adafruit_GPIO.SPI.SpiDev): If using hardware SPI, define the connection
+            software_spi (dict): Contains the pin assignments for software SPI, as defined below:
+                clk (integer): Pin number for software SPI clk
+                cs (integer): Pin number for software SPI cs
+                do (integer): Pin number for software SPI MISO
+                di (integer): Pin number for software SPI MOSI
+            hardware_spi (Adafruit_GPIO.SPI.SpiDev): If using hardware SPI, define the connection
         """
         self._logger = logging.getLogger('Adafruit_MAX31856.MAX31856')
         self._spi = None
         self.tc_type = tc_type
         self.avgsel = avgsel
         # Handle hardware SPI
-        if spi is not None:
+        if hardware_spi is not None:
             self._logger.debug('Using hardware SPI')
-            self._spi = spi
-        elif clk is not None and cs is not None and do is not None:
+            self._spi = hardware_spi
+        elif software_spi is not None:
             self._logger.debug('Using software SPI')
             # Default to platform GPIO if not provided.
             if gpio is None:
-                gpio = GPIO.get_platform_gpio()
-            self._spi = Adafruit_GPIO.SPI.BitBang(gpio, clk, di, do, cs)
+                gpio = Adafruit_GPIO.get_platform_gpio()
+            self._spi = Adafruit_GPIO.SPI.BitBang(gpio, software_spi.clk, software_spi.di,
+                                                  software_spi.do, software_spi.cs)
         else:
             raise ValueError('Must specify either spi for for hardware SPI or clk, cs, and do for softwrare SPI!')
         self._spi.set_clock_hz(5000000)
@@ -196,7 +195,7 @@ class MAX31856(object):
         val_low_byte = self._read_register(self.MAX31856_REG_READ_CJTL)
         val_high_byte = self._read_register(self.MAX31856_REG_READ_CJTH)
 
-        temp_c = MAX31856._cjTempFromBytes(val_high_byte, val_low_byte)
+        temp_c = MAX31856._cj_temp_from_bytes(val_high_byte, val_low_byte)
         self._logger.debug("Cold Junction Temperature {0} deg. C".format(temp_c))
 
         return temp_c
@@ -208,7 +207,7 @@ class MAX31856(object):
         val_mid_byte = self._read_register(self.MAX31856_REG_READ_LTCBM)
         val_high_byte = self._read_register(self.MAX31856_REG_READ_LTCBH)
 
-        temp_c = MAX31856._thermocoupleTempFromBytes(val_low_byte, val_mid_byte, val_high_byte)
+        temp_c = MAX31856._thermocouple_temp_from_bytes(val_low_byte, val_mid_byte, val_high_byte)
 
         self._logger.debug("Thermocouple Temperature {0} deg. C".format(temp_c))
 
@@ -244,7 +243,8 @@ class MAX31856(object):
             raise RuntimeError('Did not read expected number of bytes from device!')
 
         value = raw[1]
-        self._logger.debug('Read Register: 0x{0:02X}, Raw Value: 0x{1:02X}'.format((address & 0xFFFF), (value & 0xFFFF)))
+        self._logger.debug('Read Register: 0x{0:02X}, Raw Value: 0x{1:02X}'.format(
+            (address & 0xFFFF), (value & 0xFFFF)))
         return value
 
 
@@ -257,27 +257,14 @@ class MAX31856(object):
             write_value (8-bit Hex): Value to write to the register
         '''
         self._spi.transfer([address, write_value])
-        self._logger.debug('Wrote Register: 0x{0:02X}, Value 0x{1:02X}'.format((address & 0xFF), (write_value & 0xFF)))
+        self._logger.debug('Wrote Register: 0x{0:02X}, Value 0x{1:02X}'.format((address & 0xFF),
+                                                                            (write_value & 0xFF)))
 
         # If we've gotten this far without an exception, the transmission must've gone through
         return True
 
 
     # Deprecated Methods
-    @staticmethod
-    def _cjTempFromBytes(msb, lsb):     #pylint: disable-msg=invalid-name
-        """Depreciated due to Python naming convention, use _cj_temp_from_bytes instead
-        """
-        warnings.warn("Depreciated due to Python naming convention, use _cj_temp_from_bytes() instead", DeprecationWarning)
-        return _cj_temp_from_bytes(msb, lsb)
-
-    @staticmethod
-    def _thermocoupleTempFromBytes(byte0, byte1, byte2):    #pylint: disable-msg=invalid-name
-        """Depreciated due to Python naming convention, use _thermocouple_temp_from_bytes instead
-        """
-        warnings.warn("Depreciated due to Python naming convention, use _thermocouple_temp_from_bytes() instead", DeprecationWarning)
-        return _thermocouple_temp_from_bytes(byte0, byte1, byte2)
-
     def readTempC(self):    #pylint: disable-msg=invalid-name
         """Depreciated due to Python naming convention, use read_temp_c instead
         """
