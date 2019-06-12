@@ -1,2 +1,2 @@
-rpi.gpio
+RPi.GPIO
 Adafruit_GPIO

@@ -29,7 +29,8 @@ You can confirm that SPI is enabled by checking to see you get a response simila
 Installing Library
 ------------------
 
-I recommend running this code from within a virtual environment, cd to your desired source directory and clone the repository:
+I recommend running this code from within a virtual environment, cd to your desired source directory and clone the
+repository:
 
 .. code::
 
@@ -43,13 +44,19 @@ I recommend running this code from within a virtual environment, cd to your desi
 Running Example/ Tests
 ----------------------
 
-Examples are in the examples directory, or tests are in the `Adafruit_MAX31856 <https://github.com/johnrbnsn/Adafruit_Python_MAX31856/tree/master/Adafruit_MAX31856>`_ directory.  From within this directory, run simpletest.py:
+Examples are in the examples directory, or tests are in the
+`Adafruit_MAX31856 <https://github.com/johnrbnsn/Adafruit_Python_MAX31856/tree/master/Adafruit_MAX31856>`_
+directory.  From within this directory, run simpletest.py, or the same example with an alternate thermocouple type (k
+for the example, same process for any thermocouple type):
 
 .. code::
 
     (env_py3) $ python simpletest.py
+    (env_py3) $ python simpletest_k_type.py
 
-Runing Tests, cd to `Adafruit_MAX31856 <https://github.com/johnrbnsn/Adafruit_Python_MAX31856/tree/master/Adafruit_MAX31856>`_ and run:
+Runing Tests, cd to
+`Adafruit_MAX31856 <https://github.com/johnrbnsn/Adafruit_Python_MAX31856/tree/master/Adafruit_MAX31856>`_
+and run:
 
 .. code::
 
@@ -58,7 +65,9 @@ Runing Tests, cd to `Adafruit_MAX31856 <https://github.com/johnrbnsn/Adafruit_Py
 Debugging
 ---------
 
-If you are having issues, run the tests located in the `Adafruit\_MAX31856 <https://github.com/johnrbnsn/Adafruit_Python_MAX31856/tree/master/Adafruit_MAX31856>`_ directory by:
+If you are having issues, run the tests located in the
+`Adafruit\_MAX31856 <https://github.com/johnrbnsn/Adafruit_Python_MAX31856/tree/master/Adafruit_MAX31856>`_
+directory by:
 
 .. code::
 
@@ -66,10 +75,9 @@ If you are having issues, run the tests located in the `Adafruit\_MAX31856 <http
 
 The resulting output and the test_MAX31856.log file should help with debugging the issue.
 
-Supporting Developer
---------------------
-Please consider supporting me if you found this code helpful: `<http://paypal.me/johnrbnsn>`_
-
 Acknowledgement
 ---------------
-This code was modeled after the `Adafruit MAX31855 repository <https://github.com/adafruit/Adafruit_Python_MAX31855>`_ which works with the prior version of this thermocouple amplifier.  There is only an Arduino example available from Adafruit at this time, since I use RasPi, I created this library.
+This code was modeled after the
+`Adafruit MAX31855 repository <https://github.com/adafruit/Adafruit_Python_MAX31855>`_ which works with
+the prior version of this thermocouple amplifier.  There is only an Arduino example available from Adafruit at this
+time, since I use RasPi, I created this library.

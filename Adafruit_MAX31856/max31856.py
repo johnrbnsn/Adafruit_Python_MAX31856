@@ -1,8 +1,9 @@
-'''max31856.py
+"""
+max31856.py
 
 Class which defines interaction with the MAX31856 sensor.
 
-Copyright (c) 2016 John Robinson
+Copyright (c) 2019 John Robinson
 Author: John Robinson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,13 +23,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-'''
+"""
 import logging
 import warnings
-import math
 
 import Adafruit_GPIO as Adafruit_GPIO
 import Adafruit_GPIO.SPI as SPI
+
 
 class MAX31856(object):
     """Class to represent an Adafruit MAX31856 thermocouple temperature
@@ -88,9 +89,9 @@ class MAX31856(object):
     MAX31856_S_TYPE = 0x6 # Read S Type Thermocouple
     MAX31856_T_TYPE = 0x7 # Read T Type Thermocouple
 
-
     def __init__(self, tc_type=MAX31856_T_TYPE, avgsel=0x0, software_spi=None, hardware_spi=None, gpio=None):
-        """Initialize MAX31856 device with software SPI on the specified CLK,
+        """
+        Initialize MAX31856 device with software SPI on the specified CLK,
         CS, and DO pins.  Alternatively can specify hardware SPI by sending an
         SPI.SpiDev device in the spi parameter.
 
@@ -122,7 +123,8 @@ class MAX31856(object):
             self._spi = SPI.BitBang(gpio, software_spi['clk'], software_spi['di'],
                                                   software_spi['do'], software_spi['cs'])
         else:
-            raise ValueError('Must specify either spi for for hardware SPI or clk, cs, and do for softwrare SPI!')
+            raise ValueError(
+                'Must specify either spi for for hardware SPI or clk, cs, and do for softwrare SPI!')
         self._spi.set_clock_hz(5000000)
         # According to Wikipedia (on SPI) and MAX31856 Datasheet:
         #   SPI mode 1 corresponds with correct timing, CPOL = 0, CPHA = 1
@@ -137,7 +139,8 @@ class MAX31856(object):
 
     @staticmethod
     def _cj_temp_from_bytes(msb, lsb):
-        """Takes in the msb and lsb from a Cold Junction (CJ) temperature reading and converts it
+        """
+        Takes in the msb and lsb from a Cold Junction (CJ) temperature reading and converts it
         into a decimal value.
 
         This function was removed from readInternalTempC() and moved to its own method to allow for
@@ -164,7 +167,8 @@ class MAX31856(object):
 
     @staticmethod
     def _thermocouple_temp_from_bytes(byte0, byte1, byte2):
-        """Converts the thermocouple byte values to a decimal value.
+        """
+        Converts the thermocouple byte values to a decimal value.
 
         This function was removed from readInternalTempC() and moved to its own method to allow for
             easier testing with standard values.
@@ -193,7 +197,9 @@ class MAX31856(object):
         return temp_c
 
     def read_internal_temp_c(self):
-        """Return internal temperature value in degrees celsius."""
+        """
+        Return internal temperature value in degrees celsius.
+        """
         val_low_byte = self._read_register(self.MAX31856_REG_READ_CJTL)
         val_high_byte = self._read_register(self.MAX31856_REG_READ_CJTH)
 
@@ -202,9 +208,10 @@ class MAX31856(object):
 
         return temp_c
 
-
     def read_temp_c(self):
-        """Return the thermocouple temperature value in degrees celsius."""
+        """
+        Return the thermocouple temperature value in degrees celsius.
+        """
         val_low_byte = self._read_register(self.MAX31856_REG_READ_LTCBL)
         val_mid_byte = self._read_register(self.MAX31856_REG_READ_LTCBM)
         val_high_byte = self._read_register(self.MAX31856_REG_READ_LTCBH)
@@ -215,7 +222,6 @@ class MAX31856(object):
 
         return temp_c
 
-
     def read_fault_register(self):
         """Return bytes containing fault codes and hardware problems.
 
@@ -224,9 +230,9 @@ class MAX31856(object):
         reg = self._read_register(self.MAX31856_REG_READ_FAULT)
         return reg
 
-
     def _read_register(self, address):
-        '''Reads a register at address from the MAX31856
+        """
+        Reads a register at address from the MAX31856
 
         Args:
             address (8-bit Hex): Address for read register.  Format 0Xh. Constants listed in class
@@ -238,8 +244,7 @@ class MAX31856(object):
             byte, the dummy byte is only used to keep the SPI clock ticking as we read in the
             value.  The first returned byte is discarded because no data is transmitted while
             specifying the register address.
-        '''
-
+        """
         raw = self._spi.transfer([address, 0x00])
         if raw is None or len(raw) != 2:
             raise RuntimeError('Did not read expected number of bytes from device!')
@@ -249,22 +254,21 @@ class MAX31856(object):
             (address & 0xFFFF), (value & 0xFFFF)))
         return value
 
-
     def _write_register(self, address, write_value):
-        '''Writes to a register at address from the MAX31856
+        """
+        Writes to a register at address from the MAX31856
 
         Args:
             address (8-bit Hex): Address for read register.  Format 0Xh. Constants listed in class
                 as MAX31856_REG_WRITE_*
             write_value (8-bit Hex): Value to write to the register
-        '''
+        """
         self._spi.transfer([address, write_value])
         self._logger.debug('Wrote Register: 0x{0:02X}, Value 0x{1:02X}'.format((address & 0xFF),
                                                                             (write_value & 0xFF)))
 
         # If we've gotten this far without an exception, the transmission must've gone through
         return True
-
 
     # Deprecated Methods
     def readTempC(self):    #pylint: disable-msg=invalid-name
